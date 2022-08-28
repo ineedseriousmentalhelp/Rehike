@@ -1,1 +1,24 @@
-hold on bitch
+{
+    "whatToWatch": "Главная",
+    "trending": "В тренде",
+    "myChannel": "Мой канал",
+    "showMore": "Показать больше",
+    "showFewer": "Показать меньше",
+    "guideBuilderLabel": "Просмотр каналов",
+    "manageSubscriptionsLabel": "Управление подписками",
+    "bestOfYouTubeSection": "Лучшее из YouTube",
+    "notifications": {
+        "watchLaterVideoAdded": "Добавлено в Смотреть позже",
+        "watchLaterVideoRemoved": "Удаленный в Смотреть позже",
+        "subscription": "Добавлена подписка",
+        "unsubscription": "Подписка удалена",
+        "playlistLike": "Сохранено в плейлистах",
+        "playlistUnlike": "Удалено из плейлистов",
+        "playlistVideoAdded": "Добавлено в плейлист",
+        "playlistVideoRemoved": "Удалено из плейлиста",
+        "videoLike": "Добавлено в понравившиеся видео",
+        "videoUnlike": "Удалено из понравившихся видео",
+        "eventReminderSet": "Вам напомнят об этом событии",
+        "eventReminderRemoved": "Напоминание о событии удалено"
+    }
+}
