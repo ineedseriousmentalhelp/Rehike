@@ -1,10 +1,10 @@
 {
-	"previousHash": "5c7fd2941e8ce1db3289f3e33fcd3baa160c0493",
-	"currentRevisionId": 422,
-	"subject": "fix comments signed out",
-	"body": "fix comments signed out",
+	"previousHash": "bfa44479977ce7fa321d1a6dbf2f01c319026e55",
+	"currentRevisionId": 437,
+	"subject": "Process teaser comments using comment thread model",
+	"body": "Process teaser comments using comment thread model",
 	"branch": "master",
-	"committerName": "aubymori",
-	"committerEmail": "aubyomori@gmail.com",
-	"time": 1661515364
+	"committerName": "Coffee",
+	"committerEmail": "99076687+YukisCoffee@users.noreply.github.com",
+	"time": 1663152609
 }
