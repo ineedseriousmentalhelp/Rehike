@@ -4,8 +4,9 @@ namespace Rehike\Model\Channels;
 use Rehike\Model\Channels\Channels4\MChannelAboutMetadata;
 use Rehike\Model\Channels\Channels4\BrandedPageV2\MSubnav;
 use Rehike\Model\Channels\Channels4\Sidebar\MRelatedChannels;
-use Rehike\Model\Appbar\MAppbarNavItemStatus;
-use Rehike\TemplateFunctions as TF;
+use Rehike\Model\Appbar\MAppbarNavItem;
+use Rehike\Model\Browse\InnertubeBrowseConverter;
+use Rehike\Request;
 
 class Channels4Model
 {
@@ -45,23 +46,62 @@ class Channels4Model
         {
             if (isset($response["header"]))
             {
-                $response["header"]->addTabs($tabs);
+                /** @var object */
+                $videosTab = null;
 
-                foreach ($tabs as $tab) if (isset($tab->tabRenderer->selected))
+                // Splice "live" tab as this should be cascaded into videos.
+                for ($i = 0; $i < count($tabs); $i++)
+                {
+                    if (isset($tabs[$i]->tabRenderer))
+                    {
+                        // Do NOT call this $tab. It will break the logic for
+                        // god only fucking knows why and you'll get some sorta
+                        // duplicate tab renderer.
+                        $tabR = &$tabs[$i];
+
+                        $tabEndpoint = $tabR->tabRenderer->endpoint->commandMetadata->webCommandMetadata->url;
+
+                        if (stripos($tabEndpoint, "/videos"))
+                        {
+                            $videosTab = &$tabR;
+                        }
+                        else if (stripos($tabEndpoint, "/streams") || stripos($tabEndpoint, "/shorts"))
+                        {
+                            $tabR->hidden = true;
+
+                            if (@$tabR->tabRenderer->selected) $videosTab->tabRenderer->selected = true;
+                        }
+                    }
+                }
+                
+                $response["header"]->addTabs($tabs, ($yt -> partiallySelectTabs ?? false));
+
+                foreach ($tabs as $tab) if (@$tab -> tabRenderer)
                 {
                     $tabEndpoint = $tab->tabRenderer->endpoint->commandMetadata->webCommandMetadata->url;
 
-                    $yt->appbar->nav->addItem(
-                        $tab->tabRenderer->title,
-                        $tabEndpoint,
-                        $tab->tabRenderer->selected ? MAppbarNavItemStatus::Selected : MAppbarNavItemStatus::Unselected
-                    );
+                    if (!@$tab->hidden)
+                    {
+                        $yt->appbar->nav->addItem(
+                            $tab->tabRenderer->title,
+                            $tabEndpoint,
+                            @$tab->tabRenderer->status
+                        );
+                    }
 
-                    if ($tab->tabRenderer->selected)
+                    if (@$tab->tabRenderer->status > 0)
                     {
                         $baseUrl = self::$baseUrl;
                         self::$currentTab = str_replace("$baseUrl/", "", $tabEndpoint);
                         $currentTabContents = &$tab->tabRenderer->content;
+                    }
+                }
+                elseif (@$tab -> expandableTabRenderer)
+                {
+                    if (@$tab->expandableTabRenderer->selected) {
+                        $baseUrl = self::$baseUrl;
+                        self::$currentTab = str_replace("$baseUrl/", "", $tabEndpoint);
+                        $currentTabContents = &$tab->expandableTabRenderer->content;
                     }
                 }
 
@@ -104,6 +144,8 @@ class Channels4Model
 
         $response += ["content" => self::getTabContents($currentTabContents)];
 
+        $response += ["baseUrl" => self::$baseUrl];
+
         // Send the response array
         return (object)$response;
     }
@@ -136,9 +178,28 @@ class Channels4Model
         {
             return self::handleGridTab($a, $content);
         }
+        else if ($a = @$content->richGridRenderer)
+        {
+            return self::handleGridTab(InnertubeBrowseConverter::richGridRenderer($a), $content, true);
+        }
         else if (($b = @$content->sectionListRenderer->contents[0]->itemSectionRenderer) && ($c = @$b->contents[0]->backstagePostThreadRenderer))
         {
             return self::handleBackstage($b);
+        }
+        else if ($b = @$content->sectionListRenderer)
+        {
+            if ($submenu = @$b -> subMenu -> channelSubMenuRenderer)
+            {
+                $brandedPageV2SubnavRenderer = MSubnav::fromData($submenu);
+                unset($b -> subMenu);
+            }
+
+            return (object) [
+                "sectionListRenderer" => InnertubeBrowseConverter::sectionListRenderer($b, [
+                    "channelRendererUnbrandedSubscribeButton" => true
+                ]),
+                "brandedPageV2SubnavRenderer" => $brandedPageV2SubnavRenderer ?? null
+            ];
         }
         else
         {
@@ -146,7 +207,7 @@ class Channels4Model
         }
     }
 
-    public static function handleGridTab($data, $parentTab)
+    public static function handleGridTab($data, $parentTab, $rich = false)
     {
         $currentTab = self::$currentTab;
 
@@ -155,18 +216,41 @@ class Channels4Model
         switch ($currentTab)
         {
             case "videos":
-                if ($subnav = @$parentTab->sectionListRenderer->subMenu->channelSubMenuRenderer)
+            case "streams":
+                if ($subnav = @$parentTab->sectionListRenderer->subMenu->channelSubMenuRenderer || $rich)
                 {
+                    $subnav = $subnav ?? null;
+
                     $response += [
                         "brandedPageV2SubnavRenderer" => MSubnav::bakeVideos($subnav)
                     ];
                 }
                 break;
+            default:
+                if ($subnav = @$parentTab->sectionListRenderer->subMenu->channelSubMenuRenderer)
+                {
+                    $subnav = $subnav ?? null;
+
+                    $response += [
+                        "brandedPageV2SubnavRenderer" => MSubnav::fromData($subnav)
+                    ];
+                }
         }
 
-        $response += [
-            "browseContentGridRenderer" => $data
-        ];
+        if ($rich && isset($_GET["flow"]) && "list" == $_GET["flow"])
+        {
+            $response += [
+                "items" => $data->items
+            ];
+        }
+        else
+        {
+            $response += [
+                "browseContentGridRenderer" => InnertubeBrowseConverter::gridRenderer($data, [
+                    "channelRendererUnbrandedSubscribeButton" => true
+                ])
+            ];
+        }
 
         return (object)$response;
     }

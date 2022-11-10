@@ -93,6 +93,15 @@ class i18n
         return self::$namespaces[$name];
     }
 
+    public function getStrings() {
+        return $this -> strings;
+    }
+
+    public static function &namespaceExists($name)
+    {
+        return isset(self::$namespaces[$name]);
+    }
+
     /**
      * Register language definitions from a file.
      * 
@@ -256,6 +265,15 @@ class i18n
     public function setLanguage($value)
     {
         $this->language = $value;
+    }
+
+    /**
+     * Get the active language of an instance.
+     * 
+     * @return string
+     */
+    public function getLanguage() {
+        return $this->language;
     }
 
     /**

@@ -130,7 +130,7 @@ class Converter
         $response[] = $homeItem;
 
         // My channel item (if signed in)
-        if ($signedIn)
+        if ($signedIn && isset($signinInfo->ucid))
         {
             $response[] = self::bakeGuideItem(
                 "/channel/{$signinInfo->ucid}",
@@ -342,6 +342,8 @@ class Converter
                 $responseItem = &$item;
             }
         }
+
+        if (!isset($section)) return;
 
         // Ugly last item hack to get rid of the "show more" button WEB v2
         // reports

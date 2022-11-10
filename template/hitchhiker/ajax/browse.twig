@@ -1,30 +1,37 @@
-{% import "common/uix/load_more_button.twig" as load_more %}
-{{ contentType("application/json") }}
+{%- from "common/browse/item_section.twig" import render as item_section -%}
+{%- import "common/uix/lockup.twig" as lockup -%}
+{%- from "common/playlist/pl_video.twig" import render as pl_video -%}
 {
-    {% if yt.nextContinuation %}
-    "load_more_widget_html": {{ load_more.render(yt.nextContinuation, yt.target)|json_encode|raw }},
-    {% endif %}
+    {%- if yt.page.continuation -%}
+    {%- import "common/uix/load_more_button.twig" as load_more -%}
+    "load_more_widget_html": {{ load_more.render(yt.page.continuation, yt.page.target)|json_encode|raw }},
+    {%- endif -%}
     "content_html": {%- apply json_encode|raw -%}
-    {% if yt.page.shelfList %}
-        {% import "common/uix/shelf_old.twig" as shelf %}
-        {% for shelf in yt.page.shelfList %}
-            {{ shelf.compact(shelf) }}
-        {% endfor %}
-    {% elseif yt.page.lockupList %}
-        {% import "common/uix/lockup.twig" as lockup %}
-        {% for item in yt.page.lockupList %}
-            {% if item.gridVideoRenderer or item.gridPlaylistRenderer %}
-                <li class="channels-content-item yt-shelf-grid-item">
-                    {{ lockup.grid(item) }}
-                </li>
-            {% elseif item.videoRenderer or item.playlistRenderer %}
-                <li class="expanded-shelf-content-item-wrapper">
-                    <div class="expanded-shelf-content-item">
-                        {{ lockup.tile(item) }}
-                    </div>
-                </li>
-            {% endif %}
-        {% endfor %}
-    {% endif %}
-    {% endapply %}
+    {%- for item in yt.page.items -%}
+    {%- if item.itemSectionRenderer -%}
+    <li>
+        {{ item_section(item.itemSectionRenderer) }}
+    </li>
+    {%- elseif item.gridVideoRenderer
+            or item.gridPlaylistRenderer
+            or item.gridRadioRenderer
+            or item.gridChannelRenderer -%}
+        <li class="channels-content-item yt-shelf-grid-item">
+            {{ lockup.grid(item) }}
+        </li>
+    {%- elseif item.videoRenderer
+            or item.playlistRenderer
+            or item.radioRenderer
+            or item.channelRenderer -%}
+        <li class="expanded-shelf-content-item-wrapper">
+            <div class="expanded-shelf-content-item">
+                {{ lockup.tile(item) }}
+            </div>
+        </li>
+    {%- elseif item.playlistVideoRenderer -%}
+        {{ pl_video(item) }}
+    {%- endif -%}
+    {%- endfor -%}
+    {%- endapply -%},
+    "innertube_data": {{ yt.page|json_encode|raw }}
 }

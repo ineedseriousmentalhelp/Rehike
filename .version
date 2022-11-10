@@ -1,10 +1,10 @@
 {
-	"previousHash": "bfa44479977ce7fa321d1a6dbf2f01c319026e55",
-	"currentRevisionId": 437,
-	"subject": "Process teaser comments using comment thread model",
-	"body": "Process teaser comments using comment thread model",
+	"previousHash": "a277801ec780952a5e8b017d297e183b8eaaceb6",
+	"currentRevisionId": 535,
+	"subject": "proper error on simplebox",
+	"body": "proper error on simplebox",
 	"branch": "master",
-	"committerName": "Coffee",
-	"committerEmail": "99076687+YukisCoffee@users.noreply.github.com",
-	"time": 1663152609
+	"committerName": "aubymori",
+	"committerEmail": "aubyomori@gmail.com",
+	"time": 1667793890
 }

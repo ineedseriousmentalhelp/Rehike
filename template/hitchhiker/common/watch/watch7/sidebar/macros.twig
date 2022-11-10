@@ -10,10 +10,10 @@
 {% if renderer.continuationItemRenderer %}
 {% set continuation = renderer.continuationItemRenderer.continuationEndpoint.continuationCommand.token %}
 <div id="watch-more-related" class="hid">
-    <li id="watch-more-related-loading">Loading more suggestions...</li>
+    <li id="watch-more-related-loading">{{ yt.msgs.loadingMoreSuggestions }}</li>
 </div>
 <button id="watch-more-related-button" class="yt-uix-button yt-uix-button-size-default yt-uix-button-expander" onclick=";return false;" data-continuation="{{ continuation }}" data-button-action="yt.www.watch.related.loadMore">
-    <span class="yt-uix-button-content">Show more</span>
+    <span class="yt-uix-button-content">{{ yt.msgs.showMore }}</span>
 </button>
 {% else %}
 {% set data = getLockupInfo(renderer) %}
@@ -26,7 +26,7 @@
     {# playlist html structure is entirely different #}
     {% if data != null %}
     {% if data.type == "playlist" or data.type == "radio" %}
-    <a href="{{ getUrl(info) }}" class="related-playlist yt-pl-thumb-link spf {{ data.type == "radio" ? "mix-playlist" }} resumable-list">
+    <a href="{{ getUrl(info) }}" class="related-playlist yt-pl-thumb-link spf-link {{ data.type == "radio" ? "mix-playlist" }} resumable-list">
         <span class="yt-pl-thumb {{ data.type == "radio" ? "yt-mix-thumb" }}">
             <span class="video-thumb yt-thumb yt-thumb-168">
                 <span class="yt-thumb-clip">
@@ -49,7 +49,7 @@
         {% set author = getByline(info) %}
         {% if author != null %}
         <span class="stat attribution">
-            {{ yt.config.byTextOnByline ? "<span>by </span>"|raw }}
+            {{ yt.config.byTextOnByline ? "<span>" ~ yt.msgs.usernamePrepend  ~ "</span>"|raw }}
             <span>{{ getText(author) }}</span>
         </span>
         {% endif %}
@@ -62,7 +62,7 @@
             </span>
             {% set videoTime = getVideoTime(info) %}
             {% if videoTime != null %}
-            <span id="description-id-{{ a11yId }}" class="accessible-description"> - Duration: {{ videoTime }}.</span> {# TODO: i18n #}
+            <span id="description-id-{{ a11yId }}" class="accessible-description">{{ yt.msgs.durationA11y|format(videoTime) }}</span> {# TODO: i18n #}
             {% endif %}
             {% set author = getByline(info) %}
             {% if author != null %}

@@ -17,7 +17,6 @@ class RehikeConfigManager extends ConfigManager
         [
             "useRingoBranding" => true,
             "uploadMenuType" => "MENU",
-            "useWebV2HomeEndpoint" => false,
             "versionInFooter" => true,
             "useReturnYouTubeDislike" => true,
             "enableRehikeDebugger" => false,
@@ -27,7 +26,6 @@ class RehikeConfigManager extends ConfigManager
             "movingThumbnails" => true,
             "guideOnWatchPage" => false,
             "hhCSSFixes" => true,
-            "accountPickerYtStudio" => true,
             "watchSidebarDates" => false
         ];
     
@@ -57,6 +55,15 @@ class RehikeConfigManager extends ConfigManager
                 
                 $redump = true;
             }
+        }
+
+        // Migrate legacy alias for useGridHomeStyle
+        if (isset(self::$config->{"useWebV2HomeEndpoint"}))
+        {
+            unset(self::$config->{"useWebV2HomeEndpoint"});
+            self::$config->useGridHomeStyle = true;
+
+            $redump = true;
         }
 
         if ($redump) self::dumpConfig();

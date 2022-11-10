@@ -9,6 +9,7 @@ use Rehike\Model\Clickcard\MSigninClickcard;
 use Rehike\ConfigManager\ConfigManager;
 use Rehike\Signin\API as SignIn;
 use Rehike\Util\ExtractUtils;
+use Rehike\i18n;
 
 /**
  * Implement the model for the primary info renderer.
@@ -46,6 +47,8 @@ class MVideoPrimaryInfoRenderer
     public function __construct($dataHost, $videoId)
     {
         $info = &$dataHost::$primaryInfo ?? null;
+        $i18n = i18n::newNamespace("watch/primary");
+        $i18n -> registerFromFolder("i18n/watch");
 
         if (!is_null($info))
         {
@@ -62,6 +65,9 @@ class MVideoPrimaryInfoRenderer
 
             // Create action butttons
             $orderedButtonQueue = [];
+
+            // Action button menu
+            $menu = $info -> videoActions -> menuRenderer ?? null;
 
             /*
              * Updated to just hardcode this (it's generally fine, any video can be added to a playlist)
@@ -105,21 +111,23 @@ class MVideoPrimaryInfoRenderer
              */
             if (!$dataHost::$isKidsVideo)
             {
-                $orderedButtonQueue[] = MActionButton::buildW8AddtoButton($videoId);
+                $orderedButtonQueue[] = MActionButton::buildW8AddtoButton($menu);//$videoId);
             }
 
             // Share button should always be built unless this is a
             // Kids video
             if (!$dataHost::$isKidsVideo)
             {
-                $orderedButtonQueue[] = MActionButton::buildShareButton();
+                $shareButton = MActionButton::buildShareButton($menu);
+
+                if (null != $shareButton) $orderedButtonQueue[] = $shareButton;
             }
 
             // Report button shows as an action button for livestreams, rather than
             // residing in the overflow menu.
             if ($dataHost::$isLive)
             {
-                $orderedButtonQueue[] = MActionButton::buildReportButton();
+                $orderedButtonQueue[] = MActionButton::buildReportButton($menu);
             }
 
             $this->actionButtons = &$orderedButtonQueue;
@@ -159,7 +167,7 @@ class MOwner
     {
         $secInfo = &$dataHost::$secondaryInfo;
         $info = $secInfo->owner->videoOwnerRenderer;
-        
+        $i18n = i18n::getNamespace("watch/primary");
 
         if (isset($info))
         {
@@ -181,24 +189,7 @@ class MOwner
             } else if (isset($secInfo -> subscribeButton -> subscribeButtonRenderer)) {
                 $this->subscriptionButtonRenderer = MSubscriptionActions::fromData($secInfo -> subscribeButton -> subscribeButtonRenderer, $subscribeCount);
             } else if (isset($secInfo -> subscribeButton -> buttonRenderer)) { // channel settings button
-                $this->channelSettingsButtonRenderer = new MButton((object) [
-                    "style" => "default",
-                    "size" => "default",
-                    "content" => (object) [
-                        "runs" => [
-                            (object) [
-                                "text" => "Channel settings" // TODO: i18n
-                            ]
-                        ]
-                    ],
-                    "hasIcon" => true,
-                    "noIconMarkup" => true,
-                    "anchor" => true,
-                    "href" => "/advanced_settings",
-                    "class" => [
-                        "channel-settings-link"
-                    ]
-                ]);
+                $this->subscriptionButtonRenderer = MSubscriptionActions::buildMock($subscribeCount);
             }
         }
     }
@@ -215,9 +206,8 @@ class MOwner
 class MActionButton extends MButton
 {
     // Define default button properties.
-    public $style = "opacity";
-    public $hasIcon = true;
-    public $noIconMarkup = true;
+    public $style = "STYLE_OPACITY";
+    public $icon;
     public $class = [
         "pause-resume-autoplay"
     ];
@@ -225,6 +215,8 @@ class MActionButton extends MButton
     public function __construct($data)
     {
         parent::__construct([]);
+
+        $this->icon = (object) [];
 
         // Set the button data as provided.
         $this->setText($data["label"] ?? "");
@@ -280,25 +272,59 @@ class MActionButton extends MButton
     }
 
     /**
+     * Find an action button based on its icon type.
+     * 
+     * @var  object  $menu      menuRenderer containing action buttons
+     * @var  string  $iconType  Icon type of the action button
+     * 
+     * @return object
+     */
+    public static function findActionButton($menu, $iconType) {
+        $topLevelButtons = $menu -> topLevelButtons ?? null;
+        $flexibleItems = $menu -> flexibleItems ?? null;
+
+        // Look in top level buttons
+        if (!is_null($topLevelButtons)) for ($i = 0; $i < count($topLevelButtons); $i++) {
+            $curIconType = $topLevelButtons[$i] -> buttonRenderer -> icon -> iconType ?? null;
+            if (!is_null($curIconType) && $curIconType == $iconType) {
+                return $topLevelButtons[$i] -> buttonRenderer;
+            }
+        }
+
+        // Look in "flexible items"
+        if (!is_null($flexibleItems)) for ($i = 0; $i < count($flexibleItems); $i++) {
+            $curIconType = $flexibleItems[$i] -> menuFlexibleItemRenderer -> topLevelButton -> buttonRenderer -> icon -> iconType ?? null;
+            if (!is_null($curIconType) && $curIconType == $iconType) {
+                return $flexibleItems[$i] -> menuFlexibleItemRenderer -> topLevelButton -> buttonRenderer;
+            }
+        }
+
+        // Found nothing! >:[
+        return null;
+    }
+
+    /**
      * Build a watch8 add to playlists button, or its signed out
      * stub.
      * 
      * @return void
      */
-    public static function buildW8AddtoButton($videoId)
+    public static function buildW8AddtoButton($menu)
     {
+        $button = self::findActionButton($menu, "PLAYLIST_ADD");
+        $i18n = i18n::getNamespace("watch/primary");
+
+        if (is_null($button)) return null;
+
         $buttonCfg = [
-            "label" => "Add to", // TODO: i18n
+            "label" => $i18n -> get("actionAddTo"),
             "class" => []
         ];
 
         if (!SignIn::isSignedIn())
         {
             $buttonCfg += [
-                "clickcard" => new MSigninClickcard(
-                    "Want to watch this again later?",
-                    "Sign in to add this video to a playlist."
-                ),
+                "clickcard" => MSigninClickcard::fromData($button -> command -> modalEndpoint -> modal -> modalWithTitleAndButtonRenderer ?? null),
                 "attributes" => [ // Clickcard attributes
                     "orientation" => "vertical",
                     "position" => "bottomleft"
@@ -310,7 +336,7 @@ class MActionButton extends MButton
             $buttonCfg += [
                 "videoActionsMenu" => (object)[
                     "contentId" => "yt-uix-videoactionmenu-menu",
-                    "videoId" => $videoId
+                    "videoId" => $button -> command -> addToPlaylistServiceEndpoint -> videoId ?? null
                 ]
             ];
 
@@ -328,12 +354,16 @@ class MActionButton extends MButton
     /**
      * Build a watch7 or watch8 share button.
      * 
-     * @return void
+     * @return MActionButton|null
      */
-    public static function buildShareButton()
+    public static function buildShareButton($menu)
     {
+        $button = self::findActionButton($menu, "SHARE");
+
+        if (!isset($button)) return null;
+
         return new self([
-            "label" => "Share",
+            "label" => TemplateFunctions::getText($button -> text),
             "actionPanelTrigger" => "share"
         ]);
     }
@@ -344,18 +374,17 @@ class MActionButton extends MButton
      * If the video is not a livestream, then the report button appears in
      * the more button's menu instead.
      * 
-     * @return void
+     * @return MActionButton
      */
-    public static function buildReportButton()
+    public static function buildReportButton($menu)
     {
+        $button = self::findActionButton($menu, "FLAG");
+
         return new self([
-            "label" => "Report",
+            "label" => TemplateFunctions::getText($button -> text),
             "class" => "report-button",
             "actionPanelTrigger" => "report",
-            "clickcard" => new MSigninClickcard(
-                "Need to report the video?",
-                "Sign in to report inappropriate content."
-            ),
+            "clickcard" => MSigninClickcard::fromData($button -> command -> modalEndpoint -> modal -> modalWithTitleAndButtonRenderer ?? null),
             "attributes" => [ // Clickcard attributes
                 "orientation" => "horizontal",
                 "position" => "topright"
@@ -386,8 +415,8 @@ class MLikeButtonRenderer
 
     public function __construct($dataHost, &$info, &$videoId)
     {
-        $origLikeButton = &$info->topLevelButtons[0]->toggleButtonRenderer;
-        $origDislikeButton = &$info->topLevelButtons[1]->toggleButtonRenderer;
+        $origLikeButton = &$info->topLevelButtons[0]->segmentedLikeDislikeButtonRenderer->likeButton->toggleButtonRenderer;
+        $origDislikeButton = &$info->topLevelButtons[0]->segmentedLikeDislikeButtonRenderer->dislikeButton->toggleButtonRenderer;
 
         $likeA11y = $origLikeButton->accessibility->label;
         $dislikeA11y = $origDislikeButton->accessibility->label;
@@ -401,15 +430,10 @@ class MLikeButtonRenderer
         if (is_numeric(str_replace(",", "", $likeCount)))
             $likeCountInt = (int)str_replace(",", "", $likeCount);
 
-        // Since December 2021, dislikes are unavailable.
-        $dislikeCount = "";
-
         // Account for RYD API data if it exists
         if ($dataHost::$useRyd && "" !== $likeCount)
         {
             $rydData = &$dataHost::$rydData;
-
-            $dislikeCount = number_format($rydData -> dislikes);
 
             $dislikeCountInt = (int)$rydData -> dislikes;
 
@@ -431,8 +455,7 @@ class MLikeButtonRendererButton extends MToggleButton
     protected $hideNotToggled = true;
 
     public $style = "opacity";
-    public $hasIcon = true;
-    public $noIconMarkup = true;
+    public $icon;
     public $attributes = [
         "orientation" => "vertical",
         "position" => "bottomright",
@@ -442,6 +465,8 @@ class MLikeButtonRendererButton extends MToggleButton
     public function __construct($type, $active, $count, $state)
     {
         parent::__construct($state);
+
+        $this -> icon = (object) [];
 
         $class = "like-button-renderer-" . $type;
         $this->class[] = $class;
@@ -461,10 +486,12 @@ class MLikeButton extends MLikeButtonRendererButton
 {
     public function __construct($likeCount, $a11y, $isLiked, $videoId, $active = false)
     {
-        if ($active) $likeCount++;
+        if ($active && is_numeric($likeCount)) $likeCount++;
 
-        $this->accessibilityAttributes = [
-            "label" => $a11y
+        $this->accessibility = (object) [
+            "data" => (object) [
+                "label" => $a11y
+            ]
         ];
 
         $this->tooltip = "I like this"; // TODO: i18n
@@ -484,7 +511,7 @@ class MLikeButton extends MLikeButtonRendererButton
         }
 
         if (!$signedIn && !$active) {
-            $this->clickcard = new MSigninClickcard($signinMessage, $signinDetail);
+            $this->clickcard = new MSigninClickcard($signinMessage, $signinDetail, null);
         } elseif ($signedIn && !$active) {
             $this -> attributes["post-data"] = "action=like&id=" . $videoId;
         } elseif ($signedIn && $active) {
@@ -502,7 +529,7 @@ class MDislikeButton extends MLikeButtonRendererButton
 {
     public function __construct($dislikeCount, $a11y, $isDisliked, $videoId, $active = false)
     {
-        if ($active) $dislikeCount++;
+        if ($active && is_numeric($dislikeCount)) $dislikeCount++;
 
         $this->accessibilityAttributes = [
             "label" => $a11y
@@ -522,7 +549,7 @@ class MDislikeButton extends MLikeButtonRendererButton
         }
 
         if (!$signedIn && !$active) {
-            $this->clickcard = new MSigninClickcard($signinMessage, $signinDetail);
+            $this->clickcard = new MSigninClickcard($signinMessage, $signinDetail, null);
         } elseif ($signedIn && !$active) {
             $this -> attributes["post-data"] = "action=dislike&id=" . $videoId;
         } elseif ($signedIn && $active) {
@@ -566,7 +593,7 @@ class MSuperTitle
         foreach ($superTitleLink->runs as $run) if (" " != $run->text)
         {
             $this->items[] = (object)[
-                "text" => preg_replace("/For/", "for", preg_replace("/On/", "on", ucwords(strtolower($run->text)))),
+                "text" => $run->text,
                 "url" => TemplateFunctions::getUrl($run)
             ];
         }

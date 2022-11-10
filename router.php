@@ -1,9 +1,9 @@
 <?php
 use Rehike\ControllerV2\Router;
+use Rehike\SimpleFunnel;
 
 if (isset($_GET["enable_polymer"]) && $_GET["enable_polymer"] == "1") {
-    include("simplefunnel.php");
-    die();
+    SimpleFunnel::funnelCurrentPage(true);
 }
 
 Router::funnel([
@@ -15,8 +15,13 @@ Router::funnel([
     "/favicon.ico",
     "/subscribe_embed",
     "/login",
+    "/logout",
     "/signin",
-    "/upload"
+    "/upload",
+    "/t/*",
+    "/howyoutubeworks/*",
+    "/create_channel",
+    "/new"
 ]);
 
 Router::redirect([
@@ -24,24 +29,28 @@ Router::redirect([
     "/shorts/(*)" => "/watch?v=$1",
     "/hashtag/(*)" => "/results?search_query=$1",
     "/feed/what_to_watch/**" => "/",
-    // TODO: Redirect confirmation page?
+    "/source/(*)" => function($request) {
+        if (isset($request -> path[1]))
+            return "/attribution?v=" . $request -> path[1];
+        else
+            return "/attribution";
+    },
     "/redirect(/|?)*" => function($request) {
         if (isset($request->params->q))
             return urldecode($request->params->q);
-    }
+    },
+    "/feed/library" => "/profile"
 ]);
 
 Router::get([
-    "/" => "feed/what_to_watch",
-    "/feed/trending" => "feed/trending",
-    "/feed/history**" => "feed/history",
-    "/feed/guide_builder" => "feed/guide_builder",
+    "/" => "feed",
+    "/feed/**" => "feed",
     "/debug_browse" => "debug_browse",
     "/watch" => "watch",
     "/user/**" => "channel",
     "/channel/**" => "channel",
     "/c/**" => "channel",
-    "/live_chat" => "live_chat", //"special/get_live_chat",
+    "/live_chat" => "special/get_live_chat",
     "/feed_ajax" => "ajax/feed",
     "/results" => "results",
     "/playlist" => "playlist",
@@ -51,12 +60,14 @@ Router::get([
     "/related_ajax" => "ajax/related",
     "/browse_ajax" => "ajax/browse",
     "/addto_ajax" => "ajax/addto",
+    "/live_event_reminders_ajax" => "ajax/live_event_reminders",
     "/rehike/version" => "rehike/version",
     "/rehike/static/**" => "rehike/static_router",
     "/rehike/settings" => "/rehike/settings",
     "/share_ajax" => "ajax/share",
-    "/results_ajax" => "ajax/results",
-    "default" => "404"
+    "/attribution" => "attribution",
+    "/profile" => "profile",
+    "default" => "channel"
 ]);
 
 Router::post([
@@ -68,6 +79,5 @@ Router::post([
     "/subscription_ajax" => "ajax/subscription",
     "/service_ajax" => "ajax/service",
     "/comment_service_ajax" => "ajax/comment_service",
-    "/heart_ajax" => "ajax/heart",
     "/addto_ajax" => "ajax/addto"
 ]);

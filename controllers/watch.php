@@ -15,6 +15,8 @@ use Rehike\Util\ExtractUtils;
 //
 return new class extends NirvanaController {
     public $template = 'watch';
+    
+    protected $delayLoadGuide = true;
 
     public function onGet(&$yt, $request)
     {
@@ -55,8 +57,10 @@ return new class extends NirvanaController {
         // Required for LC link implementation
         $nextOnlyParams = [];
 
-        // Generate LC (local comment) param
-        if (isset($request->params->lc))
+        $lc = $request->params->lc ?? $request->params->google_comment_id ?? null;
+
+        // Generate LC (linked comment) param
+        if (isset($lc))
         {
             $param = new NextRequestParams();
             
@@ -64,7 +68,7 @@ return new class extends NirvanaController {
             // anyways.
             $param->setUnknownThing(new UnknownThing(["a" => 0]));
 
-            $param->setLinkedCommentId($request->params->lc);
+            $param->setLinkedCommentId($lc);
 
             $nextOnlyParams += [
                 "params" => Base64Url::encode($param->serializeToString())
@@ -139,7 +143,6 @@ return new class extends NirvanaController {
 
         $response = $responses["watch"];
         $presponse = $responses["player"];
-        $yt->response = $response;
 
         $ytdata = json_decode($response);
         $playerResponse = json_decode($presponse);

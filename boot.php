@@ -24,6 +24,11 @@ i18n::newNamespace("main/regex")->registerFromFolder("i18n/regex");
 i18n::newNamespace("main/misc")->registerFromFolder("i18n/misc");
 i18n::newNamespace("main/guide")->registerFromFolder("i18n/guide");
 
+// i18n for templates
+$msgs = i18n::newNamespace("main/global");
+$msgs->registerFromFolder("i18n/global");
+$yt -> msgs = $msgs -> getStrings()[$msgs -> getLanguage()];
+
 // Controller V2 init
 ControllerV2::registerStateVariable($yt);
 ControllerV2::setRedirectHandler(require "modules/spfRedirectHandler.php");
@@ -51,9 +56,6 @@ if (isset($_COOKIE["PREF"])) {
    ];
 }
 
-// Aubrey added this to include timestamp in ytGlobalJsConfig.twig,
-// should be moved
-$yt -> version = json_decode(file_get_contents($root . "/.version"));
 
 // Import all template functions
 foreach (glob('modules/template_functions/*.php') as $file) include $file;

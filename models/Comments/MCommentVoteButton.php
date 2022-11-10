@@ -4,8 +4,7 @@ use \Rehike\Model\Common\MButton;
 
 class MCommentVoteButton extends MButton {
     // from MButton
-    public $hasIcon = true;
-    public $noIconMarkup = true;
+    public $icon;
     public $class = [
         "comment-action-buttons-renderer-thumb",
         "sprite-comment-actions"
@@ -23,21 +22,20 @@ class MCommentVoteButton extends MButton {
     /** @var string */
     public $a11yLabel;
 
-    /** @var boolean */
-    public $checked;
-
     public function __construct($data) {
-        $this -> type = $data["type"];
-        $this -> action = $data["action"] ?? "";
         $this -> a11yLabel = $data["a11yLabel"] ?? null;
-        $this -> checked = $data["checked"] ?? false;
+        $this -> icon = (object) [];
 
-        $this -> class[] = "sprite-" . $this -> type;
-        $this -> class[] = "i-a-v-sprite-" . $this -> type;
+        $this -> class[] = "sprite-" . $data["type"];
+        $this -> class[] = "i-a-v-sprite-" . $data["type"];
 
-        $this -> attributes["action-type"] = $this -> type;
-        $this -> attributes["action"] = $this -> action;
-        $this -> accessibilityAttributes["checked"] = $this -> checked ? "true" : false;
+        $this -> attributes["action-type"] = $data["type"];
+        $this -> attributes["action"] = $data["action"];
+        $this -> accessibility = (object) [
+            "accessibilityData" => (object) [
+                "checked" => $data["checked"] ? "true" : "false"
+            ]
+        ];
     }
 
     public static function fromData($data) {

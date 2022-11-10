@@ -7,13 +7,7 @@ use function YukisCoffee\getPropertyAtPath as getProp;
 return new class extends AjaxController {
     public function onPost(&$yt, $request) {
         $action = self::findAction();
-        if (!@$action) {
-            http_response_code(400);
-            echo json_encode((object) [
-                "errors" => []
-            ]);
-            die();
-        }
+        if (!@$action) self::error();
         $yt -> page = (object) [];
         
         switch ($action) {
@@ -44,21 +38,17 @@ return new class extends AjaxController {
         $this -> template = "ajax/comment_service/create_comment";
         $content = $_POST["content"] ?? null;
         $params = $_POST["params"] ?? null;
-        if((@$content == null) | (@$params == null)) {
-            http_response_code(400);
-            echo json_encode((object) [
-                "errors" => []
-            ]);
-            die();
-        }
-
+        if((@$content == null) | (@$params == null)) self::error();
         $response = Request::innertubeRequest("comment/create_comment", (object) [
             "commentText" => $_POST["content"],
             "createCommentParams" => $_POST["params"]
         ]);
         $ytdata = json_decode($response);
         $data = $ytdata -> actions[1] -> createCommentAction -> contents -> commentThreadRenderer ?? null;
-        $yt -> page = CommentThread::commentThreadRenderer($data);
+        if (null != $data) {
+            $yt -> page = CommentThread::commentThreadRenderer($data);
+        } else self::error();
+        
     }
 
     /**
@@ -70,13 +60,7 @@ return new class extends AjaxController {
         $this -> template = "ajax/comment_service/create_comment_reply";
         $content = $_POST["content"] ?? null;
         $params = $_POST["params"] ?? null;
-        if((@$content == null) | (@$params == null)) {
-            http_response_code(400);
-            echo json_encode((object) [
-                "errors" => []
-            ]);
-            die();
-        }
+        if((@$content == null) | (@$params == null)) self::error();
 
         $response = Request::innertubeRequest("comment/create_comment_reply", (object) [
             "commentText" => $_POST["content"],
@@ -84,7 +68,9 @@ return new class extends AjaxController {
         ]);
         $ytdata = json_decode($response);
         $data = $ytdata -> actions[1] -> createCommentReplyAction -> contents -> commentRenderer ?? null;
-        $yt -> page = CommentThread::commentRenderer($data, true);
+        if (null != $data) {
+            $yt -> page = CommentThread::commentRenderer($data, true);
+        } else self::error();
     }
 
     /**
@@ -96,13 +82,7 @@ return new class extends AjaxController {
     private function getComments(&$yt) {
         $this -> template = "ajax/comment_service/get_comments";
         $ctoken = $_POST["page_token"] ?? null;
-        if(!@$ctoken) {
-            http_response_code(400);
-            echo json_encode((object) [
-                "errors" => []
-            ]);
-            die();
-        }
+        if(!@$ctoken) self::error();
 
         $response = Request::innertubeRequest("next", (object) [
             "continuation" => $_POST["page_token"]
@@ -132,13 +112,7 @@ return new class extends AjaxController {
     private function getCommentReplies(&$yt) {
         $this -> template = "ajax/comment_service/get_comment_replies";
         $ctoken = $_POST["page_token"] ?? null;
-        if(!@$ctoken) {
-            http_response_code(400);
-            echo json_encode((object) [
-                "errors" => []
-            ]);
-            die();
-        }
+        if (!@$ctoken) self::error();
         
         $response = Request::innertubeRequest("next", (object) [
             "continuation" => $_POST["page_token"]
@@ -173,11 +147,6 @@ return new class extends AjaxController {
             echo json_encode((object) [
                 "response" => "SUCCESS"
             ]);
-        } else {
-            http_response_code(400);
-            echo json_encode((object) [
-                "errors" => []
-            ]);
-        }
+        } else self::error();
     }
 };

@@ -157,6 +157,31 @@ class Request
     }
 
     /**
+     * Wrap a set of functions to operate in a separate namespace
+     * as the rest of the code.
+     * 
+     * Essentially, this implements a convenient namespace switch
+     * because our code isn't bad enough as it is (actually this
+     * makes it more bearable).
+     * 
+     * @param string $namespace to switch to
+     * @param callback $cb (what to do)
+     * @return mixed
+     */
+    public static function namespaceWrap($namespace, $cb)
+    {
+        // Switch namespace for a single request
+        $previousNS = self::getNamespace();
+        self::setNamespace($namespace);
+
+        $response = $cb();
+
+        self::setNamespace($previousNS);
+
+        return $response;
+    }
+
+    /**
      * A useful wrapper for generating single request functions.
      * 
      * @param callback $cb (adds the request to queue)
@@ -164,17 +189,11 @@ class Request
      */
     public static function singleRequestWrapper($cb)
     {
-        // Switch namespace for a single request
-        $previousNS = self::getNamespace();
-        self::setNamespace("_singleRequest");
-
-        $cb();
-
-        $response = self::getResponses()["singleRequest"];
-
-        self::setNamespace($previousNS);
-
-        return $response;
+        return self::namespaceWrap("_singleRequest", function() use ($cb) {
+            $cb();
+            
+            return self::getResponses()["singleRequest"];
+        });
     }
     
     /**
@@ -200,13 +219,23 @@ class Request
     public static function getResponses()
     {
         $responses = self::getRequestManager()->runQueue();
-        $final = [];
+        static $final = [];
 
         // Find namespace for handling
         foreach (self::$namespacedRequestMap[self::getNamespace()] as $id => $namespace)
         {
             $me = @$responses["{$namespace}_{$id}"];
             if (!isset($me)) continue; // assume errored
+
+            // Prevent impossible to find bugs by the static piece of shit not fucking
+            // wiping itself because some stupid fucking dumbass decided to actually
+            // make this fucking request manager instead of using something better
+            // someone else already made like a normal fucking human being. Fuck you
+            // Taniko and I wish only the greatest pain on you for writing this pile
+            // of shit that's been a thorn in our collective backs for years. FUCK YOU
+            // FUCK YOU FUCK YOU FUCK YOU FUCK YOU FUCK YOU FUCK YOU FUCK YOU FUCK YOU FUCK YOU
+            // FUCK YOU FUCK YOU FUCK YOU FUCK YOU FUCK YOU FUCK YOU FCUK YOU FKC OUY K UGF OUY KO UYOUCKOU
+            if (isset($final[$id])) unset($final[$id]);
 
             switch ($namespace)
             {

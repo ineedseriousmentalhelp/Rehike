@@ -3,6 +3,8 @@ namespace Rehike\Model\Watch\Watch8;
 
 use \Rehike\Model\Watch\Watch7\MVideoDiscussionRenderer;
 use \Rehike\Model\Watch\Watch7\MVideoDiscussionNotice;
+use \Rehike\i18n;
+use \Rehike\Util\PrefUtils;
 
 /**
  * Implements the watch8 subcontroller for the watch model
@@ -95,6 +97,8 @@ class Watch8Subcontroller
         // Get data from the reference in the datahost
         $origResults = &self::MASTER::$secondaryResults;
         $response = [];
+        $i18n = i18n::newNamespace("watch/sec_results");
+        $i18n -> registerFromFolder("i18n/watch");
 
         if (isset($origResults->results))
         {
@@ -128,11 +132,21 @@ class Watch8Subcontroller
                 {
                     $autoplayIndex = self::getRecomAutoplay($recomsList);
 
+                    if (isset($_COOKIE["PREF"])) {
+                        $pref = PrefUtils::parse($_COOKIE["PREF"]);
+                    } else {
+                        $pref = (object) [];
+                    }
+
                     // Move autoplay video to its own object
-                    $autoplayRenderer = (object)[
-                        "results" => [ $recomsList[$autoplayIndex] ]
+                    $compactAutoplayRenderer = (object)[
+                        "contents" => [ $recomsList[$autoplayIndex] ],
+                        "infoText" => $i18n -> autoplayInfoText,
+                        "title" => $i18n -> autoplayTitle,
+                        "toggleDesc" => $i18n -> autoplayToggleDesc,
+                        "checked" => PrefUtils::autoplayEnabled($pref)
                     ];
-                    $response += ["autoplayRenderer" => $autoplayRenderer];
+                    $response += ["compactAutoplayRenderer" => $compactAutoplayRenderer];
 
                     // Remove the original reference to prevent it from 
                     // rendering twice
@@ -172,23 +186,26 @@ class Watch8Subcontroller
 
             // Mostly Daylin's messy work
             // TODO: cleanup
-            $countText = $list->videoCountText->runs;
-            $curIndex = $countText[0]->text;
-            $videoCount = $countText[2]->text;
+            $countText = $list->videoCountText->runs ?? null;
+            
+            if (!is_null($countText)) {
+                $curIndex = $countText[0]->text;
+                $videoCount = $countText[2]->text;
 
-            if ("1" == $videoCount)
-            {
-                $videoCount = "1 video";
-            }
-            else
-            {
-                $videoCount .= " videos";
-            }
+                if ("1" == $videoCount)
+                {
+                    $videoCount = "1 video";
+                }
+                else
+                {
+                    $videoCount .= " videos";
+                }
 
-            $out->videoCountText = (object)[
-                "currentIndex" => $curIndex,
-                "videoCount" => $videoCount
-            ];
+                $out->videoCountText = (object)[
+                    "currentIndex" => $curIndex,
+                    "videoCount" => $videoCount
+                ];
+            }
 
             // "previous/next video ids also need a little work
             //  let's just catch two cases with one"

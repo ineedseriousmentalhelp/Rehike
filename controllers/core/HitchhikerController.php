@@ -8,6 +8,7 @@ use SpfPhp\SpfPhp;
 use Rehike\ControllerV2\RequestMetadata;
 use Rehike\Model\Guide\MGuide as Guide;
 use Rehike\Model\Footer\MFooter as Footer;
+use Rehike\Model\Masthead\MMasthead as Masthead;
 
 /**
  * Defines a general YouTube Hitchhiker controller.
@@ -176,6 +177,45 @@ abstract class HitchhikerController
         return Guide::fromData($guide);
     }
 
+    protected static $hasAsyncGuideRequest = false;
+
+    /**
+     * Asynchronously request the guide so that it can be worked
+     * with later.
+     * 
+     * This provides a more optimal implementation of the above
+     * function.
+     * 
+     * @return void
+     */
+    public function getGuideAsync()
+    {
+        self::$hasAsyncGuideRequest = true;
+
+        Request::queueInnertubeRequest("_guide", "guide", (object)[]);
+    }
+
+    public function hasAsyncGuideRequest()
+    {
+        return self::$hasAsyncGuideRequest;
+    }
+
+    /**
+     * Get the result of the asynchronous guide request.
+     * 
+     * @return object
+     */
+    public function getGuideAsyncResult()
+    {
+        $guide = Request::getResponses()["_guide"] ?? null;
+
+        if (is_null($guide)) return null;
+
+        return Guide::fromData(
+            json_decode($guide)
+        );
+    }
+
     /**
      * Set the current page endpoint.
      * 
@@ -248,7 +288,10 @@ abstract class HitchhikerController
         $yt->useModularCore = false;
         $yt->page = (object)[];
 
-        $yt -> footer = new Footer();
+        if ($this -> useTemplate) {
+            $yt -> masthead = new Masthead(false);
+            $yt -> footer = new Footer();
+        }
     }
 
     /**

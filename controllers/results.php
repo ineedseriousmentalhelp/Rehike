@@ -18,8 +18,8 @@ class ResultsController extends NirvanaController {
 
     public function onGet(&$yt, $request) {
         // invalid request redirect
-        if (!isset($_GET['search_query'])) {
-            header('Location: /');
+        if (!isset($_GET["search_query"])) {
+            header("Location: /");
             die();
         }
         
@@ -28,16 +28,16 @@ class ResultsController extends NirvanaController {
         $i18n = &i18n::newNamespace("results");
         $i18n->registerFromFolder("i18n/results");
         
-        $yt -> query = $_GET["search_query"] ?? null;
-        self::$query = &$yt->query;
+        $yt -> masthead -> searchbox -> query = $_GET["search_query"] ?? null;
+        self::$query = &$yt -> masthead -> searchbox -> query;
         // used for filters
         $yt -> params = $_GET["sp"] ?? null;
-        self::$param = &$yt->params;
+        self::$param = &$yt -> params;
 
         $resultsIndex = self::getPaginatorIndex($yt->params);
 
         $response = Request::innertubeRequest("search", (object) [
-            "query" => $yt -> query,
+            "query" => self::$query,
             "params" => $yt -> params
         ]);
         $ytdata = json_decode($response);
@@ -45,9 +45,8 @@ class ResultsController extends NirvanaController {
         $resultsCount = ResultsModel::getResultsCount($ytdata);
 
         $paginatorInfo = self::getPaginatorInfo($resultsCount, $resultsIndex);
-        //var_dump($resultsIndex, $paginatorInfo);die();
 
-        $yt -> page = ResultsModel::bake($yt, $ytdata, $paginatorInfo);
+        $yt -> page = ResultsModel::bake($ytdata, $paginatorInfo, self::$query);
     }
 
     public static function getPaginatorIndex($sp) {
@@ -80,9 +79,9 @@ class ResultsController extends NirvanaController {
         $pagesCount = ceil($resultsCount / $rpp);
 
         return (object) [
-            'resultsPerPage' => $rpp,
-            'pageNumber' => $pageNo,
-            'pagesCount' => $pagesCount
+            "resultsPerPage" => $rpp,
+            "pageNumber" => $pageNo,
+            "pagesCount" => $pagesCount
         ];
     }
 
@@ -100,8 +99,8 @@ class ResultsController extends NirvanaController {
         }
 
         return str_replace(
-            ['+','/','='],
-            ['-','_','%3D'],
+            ["+","/","="],
+            ["-","_","%3D"],
             base64_encode($parsed->serializeToString())
         );
     }

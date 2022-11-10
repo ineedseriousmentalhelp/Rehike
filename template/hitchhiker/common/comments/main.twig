@@ -30,7 +30,7 @@
 
 {% macro comment(comment, isReply) %}
 <div class="comment-renderer {{ comment.isLiked ? "liked" }}   "  data-visibility-types="12" data-cid="{{ comment.commentId }}">
-   <a href="{{ comment.authorEndpoint.commandMetadata.webCommandMetadata.url }}" class="       spf-link ">
+   <a href="{{ getUrl(comment.authorEndpoint) }}" class="spf-link ">
       {% set thumbnailSize = (comment.isReply or isReply) ? '32' : '48' %}
       <span class="video-thumb comment-author-thumbnail yt-thumb yt-thumb-{{ thumbnailSize }}">
          <span class="yt-thumb-square">
@@ -49,7 +49,7 @@
       {% endif %}
       <div class="comment-renderer-header">
          {{ _self.channelLink(comment) }}
-         <span class="comment-renderer-time" tabindex="0"><a href="{{ comment.publishedTimeText.runs.0.navigationEndpoint.commandMetadata.webCommandMetadata.url }}" class="       spf-link ">{{ comment.publishedTimeText.runs.0.text }}</a>
+         <span class="comment-renderer-time" tabindex="0"><a href="{{ getUrl(comment.publishedTimeText.runs[0]) }}" class="spf-link ">{{ getText(comment.publishedTimeText) }}</a>
          </span>
          {%- if comment.linkedCommentBadge -%}
             <span class="comment-renderer-linked-comment">{{ comment.linkedCommentBadge.metadataBadgeRenderer.label }}</span>
@@ -60,12 +60,12 @@
          <div class="comment-text-toggle hid">
             <div class="comment-text-toggle-link read-more">
                 <button class="yt-uix-button yt-uix-button-size-default yt-uix-button-link" type="button" onclick="return false;">
-                    <span class="yt-uix-button-content">Read more</span>
+                    <span class="yt-uix-button-content">{{ getText(comment.expandButton.buttonRenderer.text) }}</span>
                </button>
             </div>
             <div class="comment-text-toggle-link show-less hid">
                 <button class="yt-uix-button yt-uix-button-size-default yt-uix-button-link" type="button" onclick="return false;">
-                    <span class="yt-uix-button-content">Show less</span>
+                    <span class="yt-uix-button-content">{{ getText(comment.collapseButton.buttonRenderer.text) }}</span>
                 </button>
             </div>
          </div>
@@ -77,9 +77,14 @@
       </div>
       <div class="comment-renderer-footer" data-vote-status="INDIFFERENT">
          <div class="comment-action-buttons-toolbar">
-            {% if comment.actionButtons.commentActionButtonsRenderer.replyButton %}
-            <button class="yt-uix-button yt-uix-button-size-small yt-uix-button-link comment-renderer-reply comment-simplebox-trigger" type="button" onclick=";return false;" data-placeholder="Add a public reply..." data-simplebox-event="replycreated" data-simplebox-id="comment-simplebox-reply-{{ comment.commentId }}" data-simplebox-label="Reply" data-simplebox-params="{{ comment.actionButtons.commentActionButtonsRenderer.replyButton.buttonRenderer.navigationEndpoint.createCommentReplyDialogEndpoint.dialog.commentReplyDialogRenderer.replyButton.buttonRenderer.serviceEndpoint.createCommentReplyEndpoint.createReplyParams }}" data-simplebox-sessionlink="itct=CMgBEPBbIhMI6bL2yIzE7QIVN8jBCh0WXA-s" data-simplebox-target="/comment_service_ajax?action_create_comment_reply=1"><span class="yt-uix-button-content">Reply</span></button>
-            {% endif %}
+            {%- from "common/uix/button.twig" import render as button -%}
+            {# {% if comment.actionButtons.commentActionButtonsRenderer.replyButton %}
+            <button class="yt-uix-button yt-uix-button-size-small yt-uix-button-link comment-renderer-reply comment-simplebox-trigger" type="button" onclick=";return false;" data-placeholder="{{ getText(comment.actionButtons.commentActionButtonsRenderer.replyButton.buttonRenderer.navigationEndpoint.createCommentReplyDialogEndpoint.dialog.commentReplyDialogRenderer.placeholderText) }}" data-simplebox-event="replycreated" data-simplebox-id="comment-simplebox-reply-{{ comment.commentId }}" data-simplebox-label="{{ getText(comment.actionButtons.commentActionButtonsRenderer.replyButton.buttonRenderer.text) }}" data-simplebox-params="{{ comment.actionButtons.commentActionButtonsRenderer.replyButton.buttonRenderer.navigationEndpoint.createCommentReplyDialogEndpoint.dialog.commentReplyDialogRenderer.replyButton.buttonRenderer.serviceEndpoint.createCommentReplyEndpoint.createReplyParams }}" data-simplebox-sessionlink="itct=CMgBEPBbIhMI6bL2yIzE7QIVN8jBCh0WXA-s" data-simplebox-target="/comment_service_ajax?action_create_comment_reply=1"><span class="yt-uix-button-content">{{ getText(comment.actionButtons.commentActionButtonsRenderer.replyButton.buttonRenderer.text) }}</span></button>
+            {% endif %} #}
+            {{ button(comment.replyButton) }}
+            <div class="debug hid">
+                {{ comment.replyButton.data }}
+            </div>
             {% if comment.voteCount and not comment.voteCount.indifferentText == "0" %}
             <span class="comment-renderer-like-count off">{{ comment.voteCount.indifferentText }}</span>
             <span class="comment-renderer-like-count on">{{ comment.voteCount.likedText }}</span>
@@ -132,9 +137,9 @@
 {% endif %}
    <a href="{{ comment.authorEndpoint.commandMetadata.webCommandMetadata.url }}" class="comment-author-text       spf-link ">{{ getText(comment.authorText) }}</a>
 {% if comment.authorCommentBadge.authorCommentBadgeRenderer.icon.iconType and comment.authorIsChannelOwner %}
-   <span class="yt-badge comment-author-verified-badge yt-uix-tooltip" title="Verified"><span class="yt-comment-author-verified-icon yt-sprite"></span></span>
+   <span class="yt-badge comment-author-verified-badge yt-uix-tooltip" title="{{ yt.msgs.verified }}"><span class="yt-comment-author-verified-icon yt-sprite"></span></span>
 {% elseif comment.authorCommentBadge and not comment.authorIsChannelOwner %}
-   <span aria-label="Verified" class="yt-channel-title-icon-verified yt-uix-tooltip yt-sprite" data-tooltip-text="Verified"></span>
+   <span aria-label="{{ yt.msgs.verified }}" class="yt-channel-title-icon-verified yt-uix-tooltip yt-sprite" data-tooltip-text="{{ yt.msgs.verified }}"></span>
 {% endif %}
 {% if comment.authorIsChannelOwner %}
 </span>
@@ -156,17 +161,17 @@
 {%- endmacro -%}
 
 {% macro loadMoreWidget(token) %}
-<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-default load-more-button yt-uix-load-more comment-section-renderer-paginator " type="button" onclick=";return false;" aria-label="Show more
-   " data-uix-load-more-target-id="comment-section-renderer-items" data-uix-load-more-post-body="page_token={{ token }}"  data-uix-load-more-href="/comment_service_ajax?action_get_comments=1" data-sessionlink-target="/comment_service_ajax?action_get_comments=1" data-uix-load-more-post="true">
+<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-default load-more-button yt-uix-load-more comment-section-renderer-paginator " type="button" onclick=";return false;" aria-label="{{ yt.msgs.showMore }}" 
+data-uix-load-more-target-id="comment-section-renderer-items" data-uix-load-more-post-body="page_token={{ token }}"  data-uix-load-more-href="/comment_service_ajax?action_get_comments=1" data-sessionlink-target="/comment_service_ajax?action_get_comments=1" data-uix-load-more-post="true">
    <span class="yt-uix-button-content">
       <span class="load-more-loading hid">
          <span class="yt-spinner">
             <span title="Loading icon" class="yt-spinner-img  yt-sprite"></span>
-            Loading...
+            {{ yt.msgs.loading }}
          </span>
       </span>
      <span class="load-more-text">
-         Show more
+         {{ yt.msgs.showMore }}
       </span>
    </span>
 </button>
@@ -176,7 +181,7 @@
 <button class="yt-uix-button yt-uix-button-size-default yt-uix-button-default load-more-button yt-uix-load-more comment-replies-renderer-paginator {{ style_down_arrow ? 'comment-replies-renderer-expander-down' }} yt-uix-button-link" type="button" onclick=";return false;" aria-label="{{ text }}" data-uix-load-more-href="/comment_service_ajax?{{ action }}=1" data-uix-load-more-post="true" data-uix-load-more-post-body="page_token={{ token }}" data-uix-load-more-target-id="comment-replies-renderer-{{ commentId }}"><span class="yt-uix-button-content">  <span class="load-more-loading hid">
 <span class="yt-spinner">
 <span class="yt-spinner-img  yt-sprite" title="Loading icon"></span>
-Loading...
+{{ yt.msgs.loading }}
 </span>
 </span>
 <span class="load-more-text">
@@ -188,8 +193,6 @@ Loading...
 {% macro like_button_group(comment) %}
 {%- from "common/uix/button.twig" import render as button -%}
 <span role="radiogroup">
-{# <button class="yt-uix-button yt-uix-button-size-default yt-uix-button-default yt-uix-button-empty yt-uix-button-has-icon no-icon-markup comment-action-buttons-renderer-thumb  sprite-comment-actions sprite-like i-a-v-sprite-like" type="button" onclick=";return false;" aria-checked="false" aria-label="Like" role="radio" data-action="like" data-action-type="like"  data-sessionlink-target="/comment_service_ajax?action_perform_comment_action=1" data-url="/comment_service_ajax?action_perform_comment_action=1"></button>
-<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-default yt-uix-button-empty yt-uix-button-has-icon no-icon-markup comment-action-buttons-renderer-thumb  sprite-comment-actions sprite-dislike i-a-v-sprite-dislike" type="button" onclick=";return false;" aria-checked="false" aria-label="Dislike" role="radio" data-action="dislike" data-action-type="dislike"  data-sessionlink-target="/comment_service_ajax?action_perform_comment_action=1" data-url="/comment_service_ajax?action_perform_comment_action=1"></button> #}
 {%- if comment.likeButton -%}
 {{ button(comment.likeButton) }}
 {%- endif -%}

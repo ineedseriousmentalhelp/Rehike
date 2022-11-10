@@ -1,6 +1,8 @@
 <?php
 namespace Rehike\Model\Channels\Channels4;
 
+use Rehike\Model\Appbar\MAppbarNav;
+use Rehike\Model\Appbar\MAppbarNavItem;
 use Rehike\Util\ExtractUtils;
 use Rehike\Util\ImageUtils;
 use Rehike\TemplateFunctions as TF;
@@ -75,10 +77,35 @@ class MHeader
                 $a, $count
             );
         }
+        // Channel owner
+        elseif (isset($header->editChannelButtons))
+        {
+            if (isset($header->subscriberCountText))
+            {
+                $count = ExtractUtils::isolateSubCnt(TF::getText($header->subscriberCountText));
+                $this->subscriptionCount = TF::getText($header->subscriberCountText);
+            }
+
+            $this->subscriptionButton =MSubscriptionActions::buildMock(
+                $count
+            );
+        }
     }
 
-    public function addTabs($tabs)
+    public function addTabs($tabs, $partSelect = false)
     {
+        for ($i = 0; $i < count($tabs); $tab = $tabs[$i], $i++)
+        {
+            if (@$tab->hidden) array_splice($tabs, --$i, 1);
+        }
+        
+        foreach ($tabs as &$tab)
+        if (@$tab -> tabRenderer -> selected)
+        {
+            $tab -> tabRenderer -> status = $partSelect ? MAppbarNavItem::StatusPartiallySelected : MAppbarNavItem::StatusSelected;
+            unset($tab -> tabRenderer -> selected);
+        }
+
         $this->tabs = $tabs;
     }
 
